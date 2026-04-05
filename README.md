@@ -11,6 +11,11 @@
 - **fetch_content** - 抓取网页正文内容，自动提取主要内容区域
 - **get_latest_news** - 获取最新新闻头条
 - **list_engines** - 列出所有可用的搜索引擎
+- **check_health** - 检测所有搜索源健康状态
+- **clear_cache** - 清空搜索缓存
+- **cache_stats** - 查看缓存统计
+- **deep_research** - 深度研究（多轮搜索 + AI 分析）
+- **suggest_keywords** - 关键词扩展建议
 
 ## 安装
 
@@ -35,7 +40,30 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-## 配置到 Claude Code
+## 配置
+
+### 环境变量（可选）
+
+深度研究功能需要设置以下环境变量：
+
+```bash
+# Windows PowerShell
+$env:ANTHROPIC_API_KEY = "your-api-key"
+$env:ANTHROPIC_BASE_URL = "https://api.anthropic.com"  # 或其他兼容接口
+
+# Linux/macOS
+export ANTHROPIC_API_KEY="your-api-key"
+export ANTHROPIC_BASE_URL="https://api.anthropic.com"
+```
+
+代理设置（如需要）：
+
+```bash
+export HTTP_PROXY="http://127.0.0.1:7890"
+export HTTPS_PROXY="http://127.0.0.1:7890"
+```
+
+### 配置到 Claude Code
 
 在 `~/.claude/settings.json` 中添加：
 
@@ -101,6 +129,15 @@ get_latest_news(limit=10)
 - rich
 - fake-useragent
 - mcp
+
+## 隐私说明
+
+本项目**不包含任何硬编码的敏感信息**：
+- API Key 从环境变量读取，不会上传到仓库
+- Cookie 文件已通过 `.gitignore` 接除
+- 请勿将 `.env` 文件或个人配置提交到仓库
+
+团队成员只需配置自己的环境变量即可使用。
 
 ## License
 

@@ -29,7 +29,13 @@ from search_tool.api import (
     get_latest_news,
     list_available_engines,
 )
+from search_tool.async_api import async_search
+from search_tool.research import deep_research
+from search_tool.scoring import get_scorer
+from search_tool.keywords import get_expander
 from search_tool.utils.formatter import format_results
+from search_tool.utils.cache import get_cache, clear_cache
+from search_tool.utils.health import get_health_checker
 from search_tool.config import get_config
 
 
@@ -321,6 +327,82 @@ Examples:
             "properties": {}
         }
     ),
+    # P0 新增工具
+    Tool(
+        name="check_health",
+        description="Check health status of all search sources (RSS feeds, social platforms)",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
+    Tool(
+        name="clear_cache",
+        description="Clear the search result cache",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
+    Tool(
+        name="cache_stats",
+        description="Get cache statistics (hit rate, entries, etc.)",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
+    # P1 新增工具
+    Tool(
+        name="deep_research",
+        description="""Perform deep research on a topic by combining multiple search rounds,
+content fetching, and AI-powered analysis. Use this for comprehensive research on new domains.
+
+This tool will:
+1. Search across multiple engines (web + news)
+2. Extract and analyze content from top sources
+3. Generate a comprehensive summary using Claude AI
+4. Identify key findings and suggest follow-up questions
+
+Requires ANTHROPIC_API_KEY environment variable for AI analysis.""",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "topic": {
+                    "type": "string",
+                    "description": "Research topic or question"
+                },
+                "depth": {
+                    "type": "string",
+                    "enum": ["basic", "standard", "comprehensive"],
+                    "default": "standard",
+                    "description": "Research depth: basic (1 round), standard (2 rounds), comprehensive (3 rounds)"
+                },
+                "sources": {
+                    "type": "integer",
+                    "default": 5,
+                    "minimum": 3,
+                    "maximum": 15,
+                    "description": "Number of sources to analyze per round"
+                }
+            },
+            "required": ["topic"]
+        }
+    ),
+    Tool(
+        name="suggest_keywords",
+        description="Suggest expanded and related keywords for better search coverage",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Original search query"
+                }
+            },
+            "required": ["query"]
+        }
+    ),
 ]
 
 
@@ -394,6 +476,133 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             max_length = arguments.get("max_length", 8000)
             start_index = arguments.get("start_index", 0)
             output = _fetch_content(url, max_length, start_index)
+            return [TextContent(type="text", text=output)]
+
+        # P0 新增工具处理
+        elif name == "check_health":
+            checker = get_health_checker()
+            status = await checker.check_all()
+
+            lines = ["SOURCE HEALTH STATUS", "=" * 50, ""]
+            for source_name, health in status.items():
+                status_icon = {
+                    "healthy": "✓",
+                    "degraded": "⚠",
+                    "unhealthy": "✗",
+                    "unknown": "?"
+                }.get(health.status.value, "?")
+
+                lines.append(f"{status_icon} {source_name}: {health.status.value}")
+                if health.response_time > 0:
+                    lines.append(f"    Response time: {health.response_time:.0f}ms")
+                if health.error_message:
+                    lines.append(f"    Error: {health.error_message}")
+
+            lines.append("")
+            summary = checker.get_summary()
+            lines.append(f"Summary: {summary['healthy']} healthy, {summary['degraded']} degraded, {summary['unhealthy']} unhealthy")
+
+            output = "\n".join(lines)
+            return [TextContent(type="text", text=output)]
+
+        elif name == "clear_cache":
+            clear_cache()
+            return [TextContent(type="text", text="Cache cleared successfully.")]
+
+        elif name == "cache_stats":
+            cache = get_cache()
+            stats = cache.stats()
+            lines = [
+                "CACHE STATISTICS",
+                "=" * 30,
+                f"Total entries: {stats['total_entries']}",
+                f"Valid entries: {stats['valid_entries']}",
+                f"Hit count: {stats['hit_count']}",
+                f"Miss count: {stats['miss_count']}",
+                f"Hit rate: {stats['hit_rate']:.1%}",
+            ]
+            output = "\n".join(lines)
+            return [TextContent(type="text", text=output)]
+
+        # P1 新增工具处理
+        elif name == "deep_research":
+            topic = arguments.get("topic")
+            depth = arguments.get("depth", "standard")
+            sources = arguments.get("sources", 5)
+
+            # 从配置读取 API 设置
+            config = get_config()
+            result = await deep_research(
+                topic,
+                depth=depth,
+                sources=sources,
+                api_key=config.anthropic_api_key,
+                base_url=config.anthropic_base_url,
+                model=config.anthropic_model
+            )
+
+            lines = [
+                f"DEEP RESEARCH: {result.topic}",
+                "=" * 50,
+                "",
+                "SUMMARY:",
+                result.summary,
+                "",
+                "KEY FINDINGS:",
+            ]
+            for f in result.key_findings:
+                lines.append(f"  • {f}")
+
+            lines.append("")
+            lines.append("RELATED QUESTIONS:")
+            for q in result.related_questions:
+                lines.append(f"  • {q}")
+
+            lines.append("")
+            lines.append("SOURCES ANALYZED:")
+            for i, s in enumerate(result.sources[:5], 1):
+                content_preview = (s.get('content') or s.get('snippet', ''))[:100]
+                lines.append(f"  [{i}] {s['title']}")
+                lines.append(f"      URL: {s['url']}")
+                lines.append(f"      Platform: {s['platform']}")
+                lines.append(f"      Preview: {content_preview}...")
+
+            lines.append("")
+            lines.append(f"Quality Score: {result.quality_score:.2f}")
+            lines.append(f"Expanded Keywords: {', '.join(result.expanded_keywords)}")
+
+            output = "\n".join(lines)
+            return [TextContent(type="text", text=output)]
+
+        elif name == "suggest_keywords":
+            query = arguments.get("query")
+
+            # 先执行搜索获取结果，以便提取相关术语
+            results = search_web(query, limit=15)
+
+            expander = get_expander()
+            suggestion = expander.expand(query, results)
+
+            lines = [
+                f"KEYWORD SUGGESTIONS FOR: {suggestion.original}",
+                "=" * 50,
+                "",
+                "EXPANDED KEYWORDS:",
+            ]
+            for kw in suggestion.expanded:
+                lines.append(f"  • {kw}")
+
+            lines.append("")
+            lines.append("RELATED TERMS:")
+            for kw in suggestion.related:
+                lines.append(f"  • {kw}")
+
+            lines.append("")
+            lines.append("TECHNICAL TERMS:")
+            for kw in suggestion.technical_terms:
+                lines.append(f"  • {kw}")
+
+            output = "\n".join(lines)
             return [TextContent(type="text", text=output)]
 
         else:
