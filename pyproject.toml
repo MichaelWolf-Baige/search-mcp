@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.0.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "search-mcp"
+version = "1.0.0"
+description = "Unified MCP server for web search, academic research, tech news, and company dynamics"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+keywords = ["mcp", "search", "arxiv", "hackernews", "academic", "research", "duckduckgo"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+
+dependencies = [
+    "mcp>=1.0.0",
+    "ddgs>=9.0.0",
+    "arxiv>=2.0.0",
+    "aiohttp>=3.9.0",
+    "httpx>=0.25.0",
+    "beautifulsoup4>=4.12.0",
+    "feedparser>=6.0.0",
+    "lxml>=4.9.0",
+    "requests>=2.31.0",
+    "anthropic>=0.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+search-mcp = "search_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/Michael-art-cmd/search-mcp"
+Repository = "https://github.com/Michael-art-cmd/search-mcp"
+Issues = "https://github.com/Michael-art-cmd/search-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/search_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
