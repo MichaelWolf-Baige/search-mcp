@@ -136,13 +136,6 @@ search-mcp/
 - feedparser >= 6.0.0
 - requests >= 2.31.0
 
-## 隐私说明
-
-本项目**不包含任何硬编码的敏感信息**：
-- API Key 从环境变量读取
-- `.env` 文件已通过 `.gitignore` 排除
-- 请勿将个人配置提交到仓库
-
 ## License
 
 MIT
