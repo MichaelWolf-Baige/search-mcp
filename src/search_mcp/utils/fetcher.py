@@ -19,20 +19,36 @@ def fetch_content(
     url: str,
     max_length: int = 8000,
     start_index: int = 0,
-    timeout: int = 30
+    timeout: int = 30,
+    verify_ssl: bool = False
 ) -> str:
     """
     Fetch and extract main content from a webpage.
 
     Args:
         url: URL to fetch
-        max_length: Maximum characters to return
-        start_index: Character offset for pagination
-        timeout: Request timeout in seconds
+        max_length: Maximum characters to return (1-50000, default 8000)
+        start_index: Character offset for pagination (>= 0)
+        timeout: Request timeout in seconds (1-120)
+        verify_ssl: Whether to verify SSL certificates (default False for proxy compatibility)
 
     Returns:
         Clean text content
+
+    Raises:
+        ValueError: If parameters are invalid
     """
+    # Validate and clamp parameters
+    if max_length is None or max_length < 1:
+        return "Error: max_length must be at least 1"
+    if start_index is not None and start_index < 0:
+        return "Error: start_index must be >= 0"
+    if timeout is not None and timeout < 1:
+        timeout = 30  # Use default
+
+    # Clamp values
+    max_length = min(max(max_length, 1), 50000)  # 1-50000 chars
+    timeout = min(max(timeout, 1), 120)  # 1-120 seconds
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -59,6 +75,7 @@ def fetch_content(
             proxies=proxies,
             timeout=timeout,
             allow_redirects=True,
+            verify=verify_ssl,
         )
 
         if response.status_code == 403:
@@ -124,13 +141,33 @@ def fetch_content(
                 soup.find("article")
             )
 
-        # arXiv
+        # arXiv - extract title, authors, and abstract
         elif "arxiv.org" in url:
-            content_elem = (
-                soup.find(class_="abstract") or
-                soup.find(id="abs") or
-                soup.find("article")
-            )
+            # Try to get the abstract specifically
+            abstract_elem = soup.find(class_="abstract") or soup.find(id="abs")
+            if abstract_elem:
+                # Get title
+                title_elem = soup.find("h1", class_="title") or soup.find("h1")
+                title = title_elem.get_text(strip=True) if title_elem else ""
+
+                # Get authors
+                authors_elem = soup.find(class_="authors") or soup.find("div", class_="dateline")
+                authors = ""
+                if authors_elem:
+                    authors = authors_elem.get_text(strip=True)
+
+                # Get abstract text
+                abstract_text = abstract_elem.get_text(separator="\n", strip=True)
+                # Remove "Abstract:" prefix if present
+                abstract_text = re.sub(r"^Abstract:\s*", "", abstract_text)
+
+                if title and abstract_text:
+                    content_elem = abstract_elem
+                    result = f"{title}\n\nAuthors: {authors}\n\nAbstract:\n{abstract_text}"
+                else:
+                    content_elem = abstract_elem
+            else:
+                content_elem = soup.find(id="abs") or soup.find("article")
 
         # WeChat
         elif "mp.weixin.qq.com" in url:
@@ -197,12 +234,14 @@ async def async_fetch_content(
     url: str,
     max_length: int = 8000,
     start_index: int = 0,
-    timeout: int = 30
+    timeout: int = 30,
+    verify_ssl: bool = False
 ) -> str:
     """
     Async version of fetch_content using aiohttp.
     """
     import aiohttp
+    import ssl
 
     try:
         headers = {
@@ -214,6 +253,14 @@ async def async_fetch_content(
         kwargs = {"headers": headers, "timeout": aiohttp.ClientTimeout(total=timeout)}
         if proxy:
             kwargs["proxy"] = proxy
+
+        # Disable SSL verification for proxy compatibility
+        if not verify_ssl:
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            kwargs["connector"] = connector
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, **kwargs) as resp:

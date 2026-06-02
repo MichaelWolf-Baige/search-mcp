@@ -2,6 +2,7 @@
 
 import random
 import time
+import requests
 from typing import Dict, Optional
 from functools import wraps
 
@@ -69,14 +70,48 @@ class RequestDelayer:
 
 
 def get_proxies() -> Optional[Dict[str, str]]:
-    """Get proxy configuration from config"""
+    """Get proxy configuration from config
+
+    Returns empty dict {} when no proxy configured, to explicitly disable
+    system-level proxy settings (requests uses trust_env=True by default).
+    """
     config = get_config()
     if config.proxy:
         return {
             "http": config.proxy,
             "https": config.proxy,
         }
-    return None
+    # Return empty dict to explicitly disable proxy (not None)
+    # requests.get(proxies=None) will still use system proxy settings
+    return {}
+
+
+def get_session() -> requests.Session:
+    """Get a requests Session with proper proxy configuration
+
+    This is the recommended way to make HTTP requests, as it properly
+    handles system-level proxy settings by setting trust_env=False
+    when no proxy is configured.
+
+    Returns:
+        requests.Session with trust_env=False if no proxy configured,
+        or trust_env=True if proxy is configured (to read proxy from env)
+    """
+    config = get_config()
+    session = requests.Session()
+
+    if config.proxy:
+        # Use configured proxy
+        session.proxies = {
+            "http": config.proxy,
+            "https": config.proxy,
+        }
+        session.trust_env = True
+    else:
+        # Explicitly disable system proxy detection
+        session.trust_env = False
+
+    return session
 
 
 def get_common_headers() -> Dict[str, str]:

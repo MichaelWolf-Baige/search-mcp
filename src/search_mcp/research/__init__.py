@@ -255,15 +255,19 @@ async def deep_research(
     Perform deep research on a topic.
 
     Args:
-        topic: Research topic or question
+        topic: Research topic or question (should be specific, not generic like "test")
         depth: 'basic' (1 round), 'standard' (2 rounds), 'comprehensive' (3 rounds)
-        sources_per_round: Sources to analyze per round
+        sources_per_round: Sources to analyze per round (1-10)
         api_key: API key for analysis
         api_base: API base URL
         model: Model name
 
     Returns:
         ResearchResult object
+
+    Note:
+        Generic or very short topics (like "test", "hello") may return
+        irrelevant results. Use specific research questions for best results.
     """
     key = api_key or os.environ.get("ANTHROPIC_API_KEY")
     base = api_base or os.environ.get("ANTHROPIC_BASE_URL")
@@ -279,6 +283,25 @@ async def deep_research(
             quality_score=0.0,
             expanded_keywords=[]
         )
+
+    # Validate and warn about generic topics
+    GENERIC_TOPICS = {"test", "hello", "foo", "bar", "test topic", "example", "demo"}
+    topic_lower = topic.lower().strip()
+    is_generic = topic_lower in GENERIC_TOPICS or len(topic_lower) < 3
+
+    if is_generic:
+        return ResearchResult(
+            topic=topic,
+            summary=f"Warning: '{topic}' appears to be a generic test topic. For meaningful research, please provide a specific topic like 'machine learning trends 2024' or 'quantum computing applications'.",
+            key_findings=["Please provide a more specific research topic for meaningful results."],
+            sources=[],
+            related_questions=["What specific aspect of this topic would you like to research?"],
+            quality_score=0.0,
+            expanded_keywords=[]
+        )
+
+    # Validate parameters
+    sources_per_round = max(1, min(sources_per_round, 10))
 
     rounds_map = {"basic": 1, "standard": 2, "comprehensive": 3}
     num_rounds = rounds_map.get(depth, 2)

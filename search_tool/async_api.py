@@ -25,15 +25,22 @@ class AsyncSearchOptions:
 
 # 线程池执行器（用于包装同步引擎）
 _executor: ThreadPoolExecutor = None
+_executor_max_workers: int = None  # 记录创建时的max_workers
 
 
 def get_executor(max_workers: int = None) -> ThreadPoolExecutor:
     """获取或创建线程池执行器"""
-    global _executor
-    if _executor is None:
-        config = get_config()
-        max_workers = max_workers or config.max_concurrent_engines
+    global _executor, _executor_max_workers
+    config = get_config()
+    max_workers = max_workers or config.max_concurrent_engines
+
+    # 如果配置变更，重建executor
+    if _executor is None or _executor_max_workers != max_workers:
+        if _executor is not None:
+            _executor.shutdown(wait=False)
         _executor = ThreadPoolExecutor(max_workers=max_workers)
+        _executor_max_workers = max_workers
+
     return _executor
 
 
@@ -86,7 +93,8 @@ async def async_search(
         checker = get_health_checker()
         if checker.needs_refresh():
             # 在后台检测，不阻塞当前搜索
-            asyncio.create_task(_async_health_check())
+            task = asyncio.create_task(_async_health_check_safe())
+            task.add_done_callback(_handle_health_check_result)
 
     # 并发执行各引擎搜索
     loop = asyncio.get_event_loop()
@@ -233,6 +241,26 @@ async def _async_health_check():
     """异步健康检测"""
     checker = get_health_checker()
     await checker.check_all()
+
+
+async def _async_health_check_safe():
+    """安全的异步健康检测（捕获异常）"""
+    try:
+        await _async_health_check()
+        return True
+    except Exception as e:
+        print(f"Health check failed: {e}")
+        return False
+
+
+def _handle_health_check_result(task):
+    """处理健康检测任务结果"""
+    try:
+        result = task.result()
+        if not result:
+            print("Health check completed with errors")
+    except Exception as e:
+        print(f"Health check task exception: {e}")
 
 
 async def async_search_web(query: str, limit: int = 10) -> List[SearchResult]:

@@ -87,7 +87,7 @@ class SearchCache:
         self._memory_cache[key] = CacheEntry(
             data=data,
             timestamp=time.time(),
-            ttl=ttl or self.default_ttl
+            ttl=ttl if ttl is not None else self.default_ttl
         )
 
     def clear(self):

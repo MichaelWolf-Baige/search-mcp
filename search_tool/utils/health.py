@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 
+from search_tool.utils.antibot import get_session
+
 
 class HealthStatus(Enum):
     """健康状态枚举"""
@@ -129,14 +131,10 @@ class HealthChecker:
         """同步检测 URL 可用性"""
         start = time.time()
         try:
-            from search_tool.config import get_config
-            config = get_config()
-            proxies = {"http": config.proxy, "https": config.proxy} if config.proxy else None
-
-            response = requests.get(
+            session = get_session()
+            response = session.get(
                 url,
                 timeout=self.timeout,
-                proxies=proxies,
                 headers={"User-Agent": "Mozilla/5.0 SearchTool/1.0"}
             )
             elapsed = (time.time() - start) * 1000

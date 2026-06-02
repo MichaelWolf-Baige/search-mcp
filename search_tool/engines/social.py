@@ -9,6 +9,7 @@ from search_tool.utils.antibot import (
     RequestDelayer,
     get_common_headers,
     get_proxies,
+    get_session,
     configure_playwright_stealth,
 )
 from search_tool.utils.auth import CookieManager, setup_authenticated_browser
@@ -73,10 +74,10 @@ class HackerNewsEngine(BaseEngine):
                 "tags": "story",
             }
 
-            response = requests.get(
+            session = get_session()
+            response = session.get(
                 url,
                 params=params,
-                proxies=get_proxies(),
                 timeout=self.config.request_timeout,
             )
             response.raise_for_status()
@@ -159,7 +160,7 @@ class TwitterXEngine(BaseEngine):
                     results.append(result)
 
         except Exception as e:
-            print(f"[TwitterXEngine] Search error: {e}")
+            raise EngineError(self.name, f"Search failed: {str(e)}")
 
         return results
 
@@ -205,10 +206,10 @@ class RedditEngine(BaseEngine):
 
             url = self.SEARCH_URL.format(query=query, limit=limit)
 
-            response = requests.get(
+            session = get_session()
+            response = session.get(
                 url,
                 headers=headers,
-                proxies=get_proxies(),
                 timeout=self.config.request_timeout,
             )
             response.raise_for_status()
@@ -304,10 +305,10 @@ class NitterEngine(BaseEngine):
                 search_url = f"{instance}/search?f=tweets&q={query}"
 
                 headers = get_common_headers()
-                response = requests.get(
+                session = get_session()
+                response = session.get(
                     search_url,
                     headers=headers,
-                    proxies=get_proxies(),
                     timeout=self.config.request_timeout,
                 )
                 response.raise_for_status()
@@ -401,7 +402,7 @@ class CnblogsEngine(BaseEngine):
                     results.append(result)
 
         except Exception as e:
-            print(f"[CnblogsEngine] Search error: {e}")
+            raise EngineError(self.name, f"Search failed: {str(e)}")
 
         return results
 
@@ -451,7 +452,7 @@ class CSDNEngine(BaseEngine):
                     results.append(result)
 
         except Exception as e:
-            print(f"[CSDNEngine] Search error: {e}")
+            raise EngineError(self.name, f"Search failed: {str(e)}")
 
         return results
 
@@ -501,7 +502,7 @@ class ArxivEngine(BaseEngine):
                     results.append(result)
 
         except Exception as e:
-            print(f"[ArxivEngine] Search error: {e}")
+            raise EngineError(self.name, f"Search failed: {str(e)}")
 
         return results
 
@@ -551,7 +552,7 @@ class ZhihuEngine(BaseEngine):
                     results.append(result)
 
         except Exception as e:
-            print(f"[ZhihuEngine] Search error: {e}")
+            raise EngineError(self.name, f"Search failed: {str(e)}")
 
         return results
 

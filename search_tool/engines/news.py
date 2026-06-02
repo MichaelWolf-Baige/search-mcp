@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 from datetime import datetime
 
 from search_tool.engines.base import BaseEngine, SearchResult, EngineError
-from search_tool.utils.antibot import RequestDelayer, get_common_headers, get_proxies
+from search_tool.utils.antibot import RequestDelayer, get_common_headers, get_proxies, get_session
 from search_tool.config import get_config
 
 import requests
@@ -71,17 +71,21 @@ class NewsEngine(BaseEngine):
         keywords = [kw.strip().lower() for kw in query.split() if kw.strip()]
         matched = []
 
-        for article in all_articles:
-            title = article.get("title", "").lower()
-            summary = article.get("summary", "").lower()
-            content = title + " " + summary
+        # If no keywords (empty query), return all articles without filtering
+        if not keywords:
+            matched = all_articles[:limit]
+        else:
+            for article in all_articles:
+                title = article.get("title", "").lower()
+                summary = article.get("summary", "").lower()
+                content = title + " " + summary
 
-            # Match if ANY keyword is found (OR logic)
-            if any(kw in content for kw in keywords):
-                matched.append(article)
+                # Match if ANY keyword is found (OR logic)
+                if any(kw in content for kw in keywords):
+                    matched.append(article)
 
-        # Limit results
-        matched = matched[:limit]
+            # Limit results
+            matched = matched[:limit]
 
         # Convert to SearchResult
         for article in matched:
@@ -160,11 +164,10 @@ class NewsEngine(BaseEngine):
 
         try:
             headers = get_common_headers()
-            proxies = get_proxies()
-            response = requests.get(
+            session = get_session()
+            response = session.get(
                 url,
                 headers=headers,
-                proxies=proxies,
                 timeout=self.config.request_timeout,
             )
             response.raise_for_status()
@@ -253,11 +256,10 @@ class WebNewsScraper(BaseEngine):
             self._delayer.wait()
 
             headers = get_common_headers()
-            proxies = get_proxies()
-            response = requests.get(
+            session = get_session()
+            response = session.get(
                 url,
                 headers=headers,
-                proxies=proxies,
                 timeout=self.config.request_timeout,
             )
             response.raise_for_status()

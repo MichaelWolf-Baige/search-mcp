@@ -9,6 +9,7 @@ from search_tool.engines.base import SearchResult
 from search_tool.async_api import async_search
 from search_tool.scoring import get_scorer
 from search_tool.keywords import get_expander
+from search_tool.utils.antibot import get_session
 
 
 @dataclass
@@ -354,17 +355,11 @@ class DeepResearchAgent:
 
     def _fetch_url_content(self, url: str, max_length: int = 2000) -> str:
         """获取 URL 内容"""
-        import requests
-        from search_tool.config import get_config
-
-        config = get_config()
-        proxies = {"http": config.proxy, "https": config.proxy} if config.proxy else None
-
         try:
-            response = requests.get(
+            session = get_session()
+            response = session.get(
                 url,
                 timeout=15,
-                proxies=proxies,
                 headers={"User-Agent": "Mozilla/5.0 (compatible; SearchTool/1.0)"}
             )
 
@@ -385,10 +380,6 @@ class DeepResearchAgent:
             else:
                 return f"Error: HTTP {response.status_code}"
 
-        except requests.exceptions.Timeout:
-            return "Error: Request timed out"
-        except requests.exceptions.ConnectionError:
-            return "Error: Connection failed"
         except Exception as e:
             return f"Error: {str(e)[:100]}"
 

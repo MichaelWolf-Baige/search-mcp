@@ -30,6 +30,10 @@ class DuckDuckGoEngine(BaseEngine):
         """
         results = []
 
+        # Validate limit - return empty if limit <= 0
+        if limit <= 0:
+            return results
+
         try:
             # Add delay to avoid rate limiting
             self._delayer.wait()

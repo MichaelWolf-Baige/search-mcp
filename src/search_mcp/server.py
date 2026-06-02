@@ -36,24 +36,24 @@ server = Server("search-mcp")
 TOOLS = [
     Tool(
         name="search_web",
-        description="Quick web search using DuckDuckGo. Fast and privacy-friendly.",
+        description="Quick web search using DuckDuckGo. Fast and privacy-friendly. Note: DuckDuckGo API has ~50 result limit.",
         inputSchema={
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["query"]
         }
     ),
     Tool(
         name="search_news",
-        description="Search news sources for recent articles.",
+        description="Search news sources for recent articles. Note: DuckDuckGo API has ~50 result limit.",
         inputSchema={
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["query"]
         }
@@ -65,7 +65,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["query"]
         }
@@ -77,7 +77,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["query"]
         }
@@ -90,7 +90,7 @@ TOOLS = [
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
                 "subreddit": {"type": "string", "default": "all", "description": "Subreddit to search"},
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["query"]
         }
@@ -108,7 +108,7 @@ TOOLS = [
                     "enum": ["all", "zhihu", "csdn", "cnblogs"],
                     "description": "Platform to search"
                 },
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["query"]
         }
@@ -120,33 +120,33 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "company": {"type": "string", "description": "Company name"},
-                "days": {"type": "integer", "default": 7, "description": "Days to look back"},
-                "limit": {"type": "integer", "default": 10, "description": "Maximum results"}
+                "days": {"type": "integer", "default": 7, "description": "Days to look back (1-365)"},
+                "limit": {"type": "integer", "default": 10, "description": "Maximum results (1-50)"}
             },
             "required": ["company"]
         }
     ),
     Tool(
         name="fetch_content",
-        description="Extract main content from a webpage URL. Strips navigation, scripts, styles to return clean text.",
+        description="Extract main content from a webpage URL. Strips navigation, scripts, styles to return clean text. Works best with article/blog pages.",
         inputSchema={
             "type": "object",
             "properties": {
                 "url": {"type": "string", "description": "URL to fetch"},
-                "max_length": {"type": "integer", "default": 8000, "description": "Maximum characters"},
-                "start_index": {"type": "integer", "default": 0, "description": "Start index for pagination"}
+                "max_length": {"type": "integer", "default": 8000, "description": "Maximum characters (1-50000)"},
+                "start_index": {"type": "integer", "default": 0, "description": "Start index for pagination (>= 0)"}
             },
             "required": ["url"]
         }
     ),
     Tool(
         name="get_latest_news",
-        description="Get latest news headlines from RSS sources.",
+        description="Get latest news headlines from RSS sources. Valid sources: techcrunch, ars_technica, hacker_news.",
         inputSchema={
             "type": "object",
             "properties": {
-                "source": {"type": "string", "description": "Specific source (bbc_world, techcrunch, etc.)"},
-                "limit": {"type": "integer", "default": 20, "description": "Maximum results"}
+                "source": {"type": "string", "description": "Specific source: techcrunch, ars_technica, or hacker_news"},
+                "limit": {"type": "integer", "default": 20, "description": "Maximum results (1-100)"}
             }
         }
     ),
@@ -167,18 +167,18 @@ TOOLS = [
     ),
     Tool(
         name="deep_research",
-        description="Perform deep research on a topic with AI analysis. Requires ANTHROPIC_API_KEY.",
+        description="Perform deep research on a topic with AI analysis. Requires ANTHROPIC_API_KEY. Warning: Generic topics like 'test' will return warnings - use specific topics for meaningful results.",
         inputSchema={
             "type": "object",
             "properties": {
-                "topic": {"type": "string", "description": "Research topic"},
+                "topic": {"type": "string", "description": "Specific research topic (e.g., 'machine learning trends 2024', NOT generic words like 'test')"},
                 "depth": {
                     "type": "string",
                     "default": "standard",
                     "enum": ["basic", "standard", "comprehensive"],
                     "description": "Research depth"
                 },
-                "sources": {"type": "integer", "default": 5, "description": "Sources per round"}
+                "sources": {"type": "integer", "default": 5, "description": "Sources per round (1-10)"}
             },
             "required": ["topic"]
         }

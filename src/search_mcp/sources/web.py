@@ -20,13 +20,19 @@ def search_web(query: str, limit: int = 10) -> List[Dict]:
 
     Args:
         query: Search query string
-        limit: Maximum number of results (0 returns empty list)
+        limit: Maximum number of results (1-50, DuckDuckGo API has ~50 result limit)
 
     Returns:
         List of result dictionaries with title, url, snippet
+
+    Note:
+        DuckDuckGo API typically returns maximum ~50 results regardless of limit.
+        For limit > 50, results may be fewer than requested.
     """
-    if limit <= 0:
+    # Validate and clamp limit
+    if limit is None or limit < 1:
         return []
+    limit = min(limit, 50)  # DuckDuckGo API limit
 
     proxy = _get_proxy()
     try:
@@ -54,13 +60,18 @@ def search_news(query: str, limit: int = 10) -> List[Dict]:
 
     Args:
         query: Search query string
-        limit: Maximum number of results (0 returns empty list)
+        limit: Maximum number of results (1-50, DuckDuckGo API has ~50 result limit)
 
     Returns:
         List of news result dictionaries
+
+    Note:
+        DuckDuckGo API typically returns maximum ~50 results regardless of limit.
     """
-    if limit <= 0:
+    # Validate and clamp limit
+    if limit is None or limit < 1:
         return []
+    limit = min(limit, 50)  # DuckDuckGo API limit
 
     proxy = _get_proxy()
     try:
