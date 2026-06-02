@@ -39,7 +39,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/Michael-art-cmd/search-mcp.git
+git clone https://github.com/MichaelWolf-Baige/search-mcp.git
 cd search-mcp
 
 # 创建虚拟环境
